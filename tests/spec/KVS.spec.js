@@ -75,7 +75,7 @@ describe('lib/KVS.js', function () {
     });
 
     it('delete() removes the key', function () {
-        kvs.delete('foo');
+        expect(kvs.delete('foo')).to.equal(true);
         expect(kvs.get('foo')).to.equal(undefined);
 
         expect(logs.length).to.equal(1);
@@ -85,7 +85,7 @@ describe('lib/KVS.js', function () {
     });
 
     it('delete() does nothing if key does not exist', function () {
-        kvs.delete('foo');
+        expect(kvs.delete('foo')).to.equal(false);
         expect(logs.length).to.equal(0);
     });
 
