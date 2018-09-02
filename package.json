@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/borisovg/node-key-value-store/issues"
   },
-  "homepage": "https://github.com/borisovg/node-key-value-store#readme"
+  "homepage": "https://github.com/borisovg/node-key-value-store#readme",
+  "dependencies": {
+    "uuid": "^3.3.2"
+  }
 }
