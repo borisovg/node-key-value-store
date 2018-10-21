@@ -37,8 +37,15 @@ describe('lib/KVS.js - basic CRUD', function () {
         expect(kvs.get('foo').value).to.equal(123);
 
         expect(logs.length).to.equal(2);
+        expect(logs[0][0]).to.equal('debug');
         expect(logs[0][1]).to.equal('Record created');
+        expect(logs[0][2].key).to.equal('foo');
+        expect(logs[0][2].revision).to.equal(0);
+        expect(logs[1][0]).to.equal('trace');
         expect(logs[1][1]).to.equal('Record data');
+        expect(logs[1][2].key).to.equal('foo');
+        expect(logs[1][2].data).to.equal(123);
+        expect(logs[1][2].revision).to.equal(0);
     });
 
     it('.set() updates existing key value and returns true', function () {
@@ -48,8 +55,15 @@ describe('lib/KVS.js - basic CRUD', function () {
         expect(kvs.get('foo').value).to.equal(456);
 
         expect(logs.length).to.equal(2);
+        expect(logs[0][0]).to.equal('debug');
         expect(logs[0][1]).to.equal('Record updated');
+        expect(logs[0][2].key).to.equal('foo');
+        expect(logs[0][2].revision).to.equal(1);
+        expect(logs[1][0]).to.equal('trace');
         expect(logs[1][1]).to.equal('Record data');
+        expect(logs[1][2].key).to.equal('foo');
+        expect(logs[1][2].data).to.equal(456);
+        expect(logs[1][2].revision).to.equal(1);
     });
 
     it('.set() returns false if value has not changed', function () {
