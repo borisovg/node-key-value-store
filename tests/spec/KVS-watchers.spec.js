@@ -3,7 +3,7 @@
 const { expect } = require('chai');
 const KVS = require('../../lib/KVS.js');
 
-describe('lib/KVS.js', function () {
+describe('lib/KVS.js - watcher pub/sub', function () {
     const logs = [];
     let off;
 
@@ -15,82 +15,10 @@ describe('lib/KVS.js', function () {
         logs.push(arguments);
     }
 
-    afterEach(function () {
-        logs.splice(0, logs.length);
-    });
-
-    it('constructor options argument is optional', function () {
-        const kvs = new KVS();
-        expect(typeof kvs.uuid).to.equal('string');
-        kvs._log();
-    });
-
     const kvs = new KVS({ logger });
 
-    it('.get() returns undefined if key does not exist', function () {
-        expect(kvs.get('foo')).to.equal(undefined);
-    });
-
-    it('.set() adds a new key and returns true', function () {
-        expect(kvs.set('foo', 123)).to.equal(true);
-        expect(kvs.get('foo').key).to.equal('foo');
-        expect(kvs.get('foo').revision).to.equal(0);
-        expect(kvs.get('foo').value).to.equal(123);
-
-        expect(logs.length).to.equal(2);
-        expect(logs[0][1]).to.equal('Record created');
-        expect(logs[1][1]).to.equal('Record data');
-    });
-
-    it('.set() updates existing key value and returns true', function () {
-        expect(kvs.set('foo', 456)).to.equal(true);
-        expect(kvs.get('foo').key).to.equal('foo');
-        expect(kvs.get('foo').revision).to.equal(1);
-        expect(kvs.get('foo').value).to.equal(456);
-
-        expect(logs.length).to.equal(2);
-        expect(logs[0][1]).to.equal('Record updated');
-        expect(logs[1][1]).to.equal('Record data');
-    });
-
-    it('.set() returns false if value has not changed', function () {
-        expect(kvs.set('foo', 456)).to.equal(false);
-        expect(kvs.get('foo').key).to.equal('foo');
-        expect(kvs.get('foo').revision).to.equal(1);
-        expect(kvs.get('foo').value).to.equal(456);
-    });
-
-    it('.find() returns matching keys', function () {
-        expect(kvs.set('bar', 123)).to.equal(true);
-        expect(kvs.set('baz', 123)).to.equal(true);
-
-        let list = kvs.find('f');
-        expect(list.length).to.equal(1);
-        expect(list[0]).to.equal('foo');
-
-        list = kvs.find('ba');
-        expect(list.length).to.equal(2);
-        expect(list[0]).to.equal('bar');
-        expect(list[1]).to.equal('baz');
-    });
-
-    it('.find() returns all keys if start range is undefined', function () {
-        expect(kvs.find().length).to.equal(3);
-    });
-
-    it('.delete() removes the key', function () {
-        expect(kvs.delete('foo')).to.equal(true);
-        expect(kvs.get('foo')).to.equal(undefined);
-
-        expect(logs.length).to.equal(1);
-        expect(logs[0][0]).to.equal('debug');
-        expect(logs[0][1]).to.equal('Record deleted');
-        expect(logs[0][2].key).to.equal('foo');
-    });
-
-    it('.delete() does nothing if key does not exist', function () {
-        expect(kvs.delete('foo')).to.equal(false);
-        expect(logs.length).to.equal(0);
+    afterEach(function () {
+        logs.splice(0, logs.length);
     });
 
     it('.on() adds a watcher', function (done) {
@@ -98,28 +26,30 @@ describe('lib/KVS.js', function () {
             expect(data.key).to.equal('foo');
             expect(data.value).to.equal(123);
             expect(data.revision).to.equal(1);
-
-            const off2 = kvs.on('bar', function (data) {
-                expect(data.key).to.equal('bar');
-                expect(data.value).to.equal(123);
-
-                const off3 = kvs.on('foo', function (data) {
-                    expect(data.key).to.equal('foo');
-                    expect(data.value).to.equal(123);
-                    expect(data.revision).to.equal(1);
-
-                    off = function () {
-                        off1();
-                        off2();
-                        off3();
-                    };
-
-                    done();
-                });
-            });
         });
 
         kvs.set('foo', 123);
+        kvs.set('bar', 123);
+
+        const off2 = kvs.on('bar', function (data) {
+            expect(data.key).to.equal('bar');
+            expect(data.value).to.equal(123);
+            expect(data.revision).to.equal(0);
+
+            const off3 = kvs.on('foo', function (data) {
+                expect(data.key).to.equal('foo');
+                expect(data.value).to.equal(123);
+                expect(data.revision).to.equal(1);
+
+                off = function () {
+                    off1();
+                    off2();
+                    off3();
+                };
+
+                setImmediate(done);
+            });
+        });
     });
 
     it('.on() returns function to remove watcher', function () {
@@ -176,7 +106,7 @@ describe('lib/KVS.js', function () {
             counter += 1;
         };
 
-        const off1 = kvs.on('foo', { id: 'test-1', isRange: true }, function (data) {
+        const off1 = kvs.on('foo', { id: 'a', isRange: true }, function (data) {
             if (counter > 1) {
                 cb2(data);
             } else {
@@ -184,7 +114,7 @@ describe('lib/KVS.js', function () {
             }
         });
 
-        const off2 = kvs.on('foo', { id: 'test-2', isRange: true }, function (data) {
+        const off2 = kvs.on('foo', { id: 'b', isRange: true }, function (data) {
             if (counter > 2) {
                 cb2(data);
             } else {
@@ -284,9 +214,25 @@ describe('lib/KVS.js', function () {
         });
     });
 
+    it('no notification of range watches key created with undefined value', function (done) {
+        kvs.delete('foo');
+        kvs.delete('fooo');
+
+        kvs.on('foo', { isRange: true }, function () {
+            throw new Error('This should not happen');
+        });
+
+        kvs.on('foo', function () {
+            throw new Error('This should not happen');
+        });
+
+        setImmediate(done);
+    });
+
     it('.reset() removes all keys', function () {
         kvs.reset();
         expect(kvs.find().length).to.equal(0);
+        expect(kvs._range_watchers.size).to.equal(0);
         expect(logs.length).to.equal(1);
         expect(logs[0][0]).to.equal('warn');
         expect(logs[0][1]).to.equal('Store reset');
