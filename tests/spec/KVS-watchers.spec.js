@@ -94,6 +94,23 @@ describe('lib/KVS.js - watcher pub/sub', function () {
         expect(logs.length).to.equal(l);
     });
 
+    it('key with undefined value is removed when all watchers are removed', function (done) {
+        var off = kvs.on('foo', { noInitial: true }, function (data) {
+            expect(data.value).to.equal(undefined);
+            off();
+
+            const l = logs.length;
+            const msg = logs[l - 1];
+            expect(msg[0]).to.equal('debug');
+            expect(msg[1]).to.equal('Record deleted');
+            expect(msg[2].key).to.equal('foo');
+
+            done();
+        });
+
+        kvs.delete('foo');
+    });
+
     it('.on() respects the "noInitial" option', function (done) {
         const off = kvs.on('foo', { noInitial: true }, function (data) {
             expect(data.value).to.equal(1234);
