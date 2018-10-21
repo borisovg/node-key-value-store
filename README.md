@@ -36,6 +36,44 @@ store.delete('foo');
 // true
 ```
 
+Pub/sub for single keys:
+
+```
+// initial data will be sent
+store.set('foo', 123);
+
+const off = store.on('foo', function (data) {
+    console.log(data);
+    // { key: 'foo', revision: 0, value: 123 }
+    // { key: 'foo', revision: 1, value: 456 }
+});
+
+store.set('foo', 456);
+
+// notification happens in async manner
+setImmediate(off);
+```
+
+Pub/sub for range of keys:
+
+```
+// initial data will be sent
+store.set('bar1', 123);
+
+const off2 = store.on('bar', { isRange: true }, function (data) {
+    console.log(data);
+    // { key: 'bar1', revision: 0, value: 123 }
+    // { key: 'bar1', revision: 1, value: 456 }
+    // { key: 'bar2', revision: 0, value: 456 }
+});
+
+store.set('bar1', 456);
+store.set('bar2', 456);
+
+// notification happens in async manner
+setImmediate(off2);
+```
+
 ## Logging
 
 The KVS is capable of producing detailed logging.
@@ -71,3 +109,10 @@ store.delete('foo');
 // {"time":"2018-09-02T21:36:56.670Z","hostname":"glossy","pid":"26634","name":"KVS","level":"debug","key":"foo","msg":"Record deleted"}
 ```
 
+## API
+
+### new KVS([options])
+
+Creates a KVS instance.
+
+- *options.logger* Logger function (level, msg, params)
