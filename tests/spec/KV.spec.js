@@ -38,12 +38,6 @@ describe('lib/KV.js', function () {
         expect(logs[1][2].revision).to.equal(0);
     });
 
-    it('does not log "Record data" message if KV created with undefined value', function () {
-        // jshint nonew:false
-        new KV('bar', undefined, logger);
-        expect(logs.length).to.equal(1);
-    });
-
     it('.set() does not update simple type value if unchanged', function () {
         const updated = kv.set('bar');
 

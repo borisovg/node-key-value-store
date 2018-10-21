@@ -21,11 +21,15 @@ describe('lib/KVS.js - watcher pub/sub', function () {
         logs.splice(0, logs.length);
     });
 
+    it('.notify() throws if key does not exist', function () {
+        expect(() => kvs.notify('spanner')).to.throw('Unknown key');
+    });
+
     it('.on() adds a watcher', function (done) {
         const off1 = kvs.on('foo', function (data) {
             expect(data.key).to.equal('foo');
             expect(data.value).to.equal(123);
-            expect(data.revision).to.equal(1);
+            expect(data.revision).to.equal(0);
         });
 
         kvs.set('foo', 123);
@@ -39,7 +43,7 @@ describe('lib/KVS.js - watcher pub/sub', function () {
             const off3 = kvs.on('foo', function (data) {
                 expect(data.key).to.equal('foo');
                 expect(data.value).to.equal(123);
-                expect(data.revision).to.equal(1);
+                expect(data.revision).to.equal(0);
 
                 off = function () {
                     off1();
@@ -61,7 +65,7 @@ describe('lib/KVS.js - watcher pub/sub', function () {
         expect(() => off()).to.throw('Unknown watcher');
     });
 
-    it('.delete() clears value of KV with watchers instead of removing it', function (done) {
+    it('.delete() sets value of KV with watchers to undefined instead of removing it', function (done) {
         let semaphore = 2;
 
         const off = kvs.on('foo', { noInitial: true }, function (data) {
@@ -79,6 +83,15 @@ describe('lib/KVS.js - watcher pub/sub', function () {
         });
 
         kvs.delete('foo');
+
+        const l = logs.length;
+        const msg = logs[l - 1];
+        expect(msg[0]).to.equal('debug');
+        expect(msg[1]).to.equal('Record cleared');
+        expect(msg[2].key).to.equal('foo');
+
+        kvs.delete('foo');
+        expect(logs.length).to.equal(l);
     });
 
     it('.on() respects the "noInitial" option', function (done) {
@@ -148,9 +161,10 @@ describe('lib/KVS.js - watcher pub/sub', function () {
                 throw new Error('This should not happen');
             };
 
-            kvs.set('foo', 456);
-
-            setImmediate(done);
+            setImmediate(function () {
+                kvs.set('foo', 456);
+                setImmediate(done);
+            });
         };
 
         kvs.once('foo', function (data) {
